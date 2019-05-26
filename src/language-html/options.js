@@ -30,6 +30,6 @@ module.exports = {
     category: CATEGORY_HTML,
     type: "boolean",
     default: false,
-    description: "Option to handle .vue files script and style tag indentation."
+    description: "Indent script and style tags in Vue files."
   }
 };
