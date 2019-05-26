@@ -633,5 +633,5 @@ module.exports = {
   preferHardlineAsTrailingSpaces,
   shouldNotPrintClosingTag,
   shouldPreserveContent,
-  unescapeQuoteEntities,
+  unescapeQuoteEntities
 };
