@@ -307,6 +307,21 @@ Valid options:
 | ------- | ------------------------------------------------------------------------ | ----------------------------------------------------------------------- |
 | `"css"` | <code>--html-whitespace-sensitivity <css&#124;strict&#124;ignore></code> | <code>htmlWhitespaceSensitivity: "<css&#124;strict&#124;ignore>"</code> |
 
+## Vue files script and style tags indentation
+
+_First available in v1.18.0_
+
+Indent script and style tags in Vue files.
+
+Valid options:
+
+- `"false"` - Respect the default indentation of script and style tags in Vue files.
+- `"true"` - Indent script and style tags in Vue files.
+
+| Default   | CLI Override                               | API Override |
+| --------- | ------------------------------------------ | ------------ |
+| `"false"` | <code>--vue-indent-script-and-style</code> |              |
+
 ## End of Line
 
 _First available in 1.15.0_
