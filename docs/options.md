@@ -311,16 +311,16 @@ Valid options:
 
 _First available in v1.18.0_
 
-Indent script and style tags in Vue files.
+Whether or not to indent the code inside `<script>` and `<style>` tags in Vue files. Some people (like [the creator of Vue](https://github.com/prettier/prettier/issues/3888#issuecomment-459521863)) don’t indent to save an indentation level, but this might break code folding in your editor.
 
 Valid options:
 
-- `"false"` - Respect the default indentation of script and style tags in Vue files.
+- `"false"` - Do not indent script and style tags in Vue files.
 - `"true"` - Indent script and style tags in Vue files.
 
-| Default   | CLI Override                               | API Override |
-| --------- | ------------------------------------------ | ------------ |
-| `"false"` | <code>--vue-indent-script-and-style</code> |              |
+| Default | CLI Override                    | API Override                      |
+| ------- | ------------------------------- | --------------------------------- |
+| `false` | `--vue-indent-script-and-style` | `vueIndentScriptAndStyle: <bool>` |
 
 ## End of Line
 
