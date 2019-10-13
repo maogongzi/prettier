@@ -610,6 +610,11 @@ function printOpeningTag(path, options, print) {
     node.attrs.length === 1 &&
     node.attrs[0].fullName === "src" &&
     node.children.length === 0;
+  const attributeLine =
+    options.htmlSingleAttributePerLine && node.attrs.length > 1
+      ? hardline
+      : line;
+
   return concat([
     printOpeningTagStart(node, options),
     !node.attrs || node.attrs.length === 0
@@ -623,9 +628,9 @@ function printOpeningTag(path, options, print) {
       : concat([
           indent(
             concat([
-              forceNotToBreakAttrContent ? " " : line,
+              forceNotToBreakAttrContent ? " " : attributeLine,
               join(
-                line,
+                attributeLine,
                 (ignoreAttributeData => {
                   const hasPrettierIgnoreAttribute =
                     typeof ignoreAttributeData === "boolean"
