@@ -611,9 +611,7 @@ function printOpeningTag(path, options, print) {
     node.attrs[0].fullName === "src" &&
     node.children.length === 0;
   const attributeLine =
-    options.singleAttributePerLine && node.attrs.length > 1
-      ? hardline
-      : line;
+    options.singleAttributePerLine && node.attrs.length > 1 ? hardline : line;
 
   return concat([
     printOpeningTagStart(node, options),

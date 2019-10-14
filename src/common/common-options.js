@@ -47,5 +47,12 @@ module.exports = {
       { value: false, deprecated: "1.9.0", redirect: "never" },
       { value: true, deprecated: "1.9.0", redirect: "always" }
     ]
+  },
+  singleAttributePerLine: {
+    since: "1.19.0",
+    category: CATEGORY_COMMON,
+    type: "boolean",
+    default: false,
+    description: "Enforce single attribute per line in HTML, Vue and JSX."
   }
 };
