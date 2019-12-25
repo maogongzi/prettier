@@ -2254,6 +2254,10 @@ function printPathNoParens(path, options, print, args) {
             isStringLiteral(attr.value) &&
             attr.value.value.includes("\n")
         );
+      const attributeLine =
+        options.singleAttributePerLine && n.attributes.length > 1
+          ? hardline
+          : line;
 
       return group(
         concat([
@@ -2263,10 +2267,13 @@ function printPathNoParens(path, options, print, args) {
           concat([
             indent(
               concat(
-                path.map(attr => concat([line, print(attr)]), "attributes")
+                path.map(
+                  attr => concat([attributeLine, print(attr)]),
+                  "attributes"
+                )
               )
             ),
-            n.selfClosing ? line : bracketSameLine ? ">" : softline
+            n.selfClosing ? attributeLine : bracketSameLine ? ">" : softline
           ]),
           n.selfClosing ? "/>" : bracketSameLine ? "" : ">"
         ]),
