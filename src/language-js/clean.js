@@ -10,7 +10,8 @@ function clean(ast, newObj, parent) {
     "extra",
     "start",
     "end",
-    "flags"
+    "flags",
+    "errors"
   ].forEach(name => {
     delete newObj[name];
   });
@@ -58,20 +59,6 @@ function clean(ast, newObj, parent) {
     ast.specifiers.length === 0
   ) {
     delete newObj.specifiers;
-  }
-
-  // (TypeScript) bypass TSParenthesizedType
-  if (ast.type === "TSParenthesizedType") {
-    return newObj.typeAnnotation;
-  }
-
-  // (TypeScript) Bypass `& foo` and `| foo` into `foo`
-  // https://github.com/microsoft/TypeScript/issues/30995
-  if (
-    (ast.type === "TSIntersectionType" || ast.type === "TSUnionType") &&
-    ast.types.length === 1
-  ) {
-    return newObj.types[0];
   }
 
   // We convert <div></div> to <div />

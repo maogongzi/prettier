@@ -66,7 +66,8 @@ function handleOwnLineComment(comment, text, options, ast, isLastComment) {
       precedingNode,
       comment,
       options
-    )
+    ) ||
+    handleLabeledStatementComments(enclosingNode, comment)
   ) {
     return true;
   }
@@ -428,7 +429,8 @@ function handleClassComments(
     enclosingNode &&
     (enclosingNode.type === "ClassDeclaration" ||
       enclosingNode.type === "ClassExpression") &&
-    (enclosingNode.decorators && enclosingNode.decorators.length > 0) &&
+    enclosingNode.decorators &&
+    enclosingNode.decorators.length > 0 &&
     !(followingNode && followingNode.type === "Decorator")
   ) {
     if (!enclosingNode.decorators || enclosingNode.decorators.length === 0) {
@@ -564,6 +566,7 @@ function handleCommentInEmptyParens(text, enclosingNode, comment, options) {
       enclosingNode.type === "ObjectMethod") &&
       enclosingNode.params.length === 0) ||
       ((enclosingNode.type === "CallExpression" ||
+        enclosingNode.type === "OptionalCallExpression" ||
         enclosingNode.type === "NewExpression") &&
         enclosingNode.arguments.length === 0))
   ) {
@@ -572,8 +575,8 @@ function handleCommentInEmptyParens(text, enclosingNode, comment, options) {
   }
   if (
     enclosingNode &&
-    (enclosingNode.type === "MethodDefinition" &&
-      enclosingNode.value.params.length === 0)
+    enclosingNode.type === "MethodDefinition" &&
+    enclosingNode.value.params.length === 0
   ) {
     addDanglingComment(enclosingNode.value, comment);
     return true;
@@ -589,7 +592,7 @@ function handleLastFunctionArgComments(
   comment,
   options
 ) {
-  // Type definitions functions
+  // Flow function type definitions
   if (
     precedingNode &&
     precedingNode.type === "FunctionTypeParam" &&
@@ -602,7 +605,7 @@ function handleLastFunctionArgComments(
     return true;
   }
 
-  // Real functions
+  // Real functions and TypeScript function type definitions
   if (
     precedingNode &&
     (precedingNode.type === "Identifier" ||
@@ -612,7 +615,13 @@ function handleLastFunctionArgComments(
       enclosingNode.type === "FunctionExpression" ||
       enclosingNode.type === "FunctionDeclaration" ||
       enclosingNode.type === "ObjectMethod" ||
-      enclosingNode.type === "ClassMethod") &&
+      enclosingNode.type === "ClassMethod" ||
+      enclosingNode.type === "TSDeclareFunction" ||
+      enclosingNode.type === "TSCallSignatureDeclaration" ||
+      enclosingNode.type === "TSConstructSignatureDeclaration" ||
+      enclosingNode.type === "TSMethodSignature" ||
+      enclosingNode.type === "TSConstructorType" ||
+      enclosingNode.type === "TSFunctionType") &&
     privateUtil.getNextNonSpaceNonCommentCharacter(
       text,
       comment,
@@ -686,7 +695,8 @@ function handleBreakAndContinueStatementComments(enclosingNode, comment) {
 function handleCallExpressionComments(precedingNode, enclosingNode, comment) {
   if (
     enclosingNode &&
-    enclosingNode.type === "CallExpression" &&
+    (enclosingNode.type === "CallExpression" ||
+      enclosingNode.type === "OptionalCallExpression") &&
     precedingNode &&
     enclosingNode.callee === precedingNode &&
     enclosingNode.arguments.length > 0
