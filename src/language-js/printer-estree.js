@@ -2304,7 +2304,10 @@ function printPathNoParens(path, options, print, args) {
           concat([
             indent(
               concat(
-                path.map((attr) => concat([attributeLine, print(attr)]), "attributes")
+                path.map(
+                  (attr) => concat([attributeLine, print(attr)]),
+                  "attributes"
+                )
               )
             ),
             n.selfClosing ? attributeLine : bracketSameLine ? ">" : softline,

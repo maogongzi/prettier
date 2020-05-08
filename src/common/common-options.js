@@ -52,5 +52,5 @@ module.exports = {
     type: "boolean",
     default: false,
     description: "Enforce single attribute per line in HTML, Vue and JSX.",
-  }
+  },
 };
