@@ -680,12 +680,14 @@ function printAttributes(path, options, print) {
     node.attrs.length === 1 &&
     node.attrs[0].fullName === "src" &&
     node.children.length === 0;
+  const attributeLine =
+    options.singleAttributePerLine && node.attrs.length > 1 ? hardline : line;
 
   /** @type {Doc[]} */
   const parts = [
     indent([
-      forceNotToBreakAttrContent ? " " : line,
-      join(line, printedAttributes),
+      forceNotToBreakAttrContent ? " " : attributeLine,
+      join(attributeLine, printedAttributes),
     ]),
   ];
 
