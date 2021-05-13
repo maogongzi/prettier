@@ -47,7 +47,7 @@ module.exports = {
     ],
   },
   singleAttributePerLine: {
-    since: "2.1.0",
+    since: "2.3.0",
     category: CATEGORY_COMMON,
     type: "boolean",
     default: false,
