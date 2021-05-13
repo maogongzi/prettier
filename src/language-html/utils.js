@@ -1,15 +1,18 @@
 "use strict";
 
+/**
+ * @typedef {import("../common/ast-path")} AstPath
+ */
+
+const htmlTagNames = require("html-tag-names");
+const htmlElementAttributes = require("html-element-attributes");
+const { inferParserByLanguage, isFrontMatterNode } = require("../common/util");
 const {
   CSS_DISPLAY_TAGS,
   CSS_DISPLAY_DEFAULT,
   CSS_WHITE_SPACE_TAGS,
   CSS_WHITE_SPACE_DEFAULT,
 } = require("./constants.evaluate");
-const { getParserName } = require("../common/util");
-
-const htmlTagNames = require("html-tag-names");
-const htmlElementAttributes = require("html-element-attributes");
 
 const HTML_TAGS = arrayToMap(htmlTagNames);
 const HTML_ELEMENT_ATTRIBUTES = mapObject(htmlElementAttributes, arrayToMap);
@@ -47,26 +50,13 @@ function arrayToMap(array) {
 
 function mapObject(object, fn) {
   const newObject = Object.create(null);
-  for (const key of Object.keys(object)) {
-    newObject[key] = fn(object[key], key);
+  for (const [key, value] of Object.entries(object)) {
+    newObject[key] = fn(value, key);
   }
   return newObject;
 }
 
 function shouldPreserveContent(node, options) {
-  if (!node.endSourceSpan) {
-    return false;
-  }
-
-  if (
-    node.type === "element" &&
-    node.fullName === "template" &&
-    node.attrMap.lang &&
-    node.attrMap.lang !== "html"
-  ) {
-    return true;
-  }
-
   // unterminated node in ie conditional comment
   // e.g. <!--[if lt IE 9]><html><![endif]-->
   if (
@@ -95,9 +85,9 @@ function shouldPreserveContent(node, options) {
   }
 
   if (
-    isVueCustomBlock(node, options) &&
-    (options.embeddedLanguageFormatting === "off" ||
-      !inferScriptParser(node, options))
+    isVueNonHtmlBlock(node, options) &&
+    !isScriptLikeTag(node) &&
+    node.type !== "interpolation"
   ) {
     return true;
   }
@@ -106,10 +96,12 @@ function shouldPreserveContent(node, options) {
 }
 
 function hasPrettierIgnore(node) {
+  /* istanbul ignore next */
   if (node.type === "attribute") {
     return false;
   }
 
+  /* istanbul ignore next */
   if (!node.parent) {
     return false;
   }
@@ -154,10 +146,6 @@ function isScriptLikeTag(node) {
       (isUnknownNamespace(node) &&
         (node.name === "script" || node.name === "style")))
   );
-}
-
-function isFrontMatterNode(node) {
-  return node.type === "yaml" || node.type === "toml";
 }
 
 function canHaveInterpolation(node) {
@@ -287,6 +275,7 @@ function forceNextEmptyLine(node) {
   return (
     isFrontMatterNode(node) ||
     (node.next &&
+      node.sourceSpan.end &&
       node.sourceSpan.end.line + 1 < node.next.sourceSpan.start.line)
   );
 }
@@ -296,11 +285,12 @@ function forceBreakContent(node) {
   return (
     forceBreakChildren(node) ||
     (node.type === "element" &&
-      node.children.length !== 0 &&
+      node.children.length > 0 &&
       (["body", "script", "style"].includes(node.name) ||
         node.children.some((child) => hasNonTextChild(child)))) ||
     (node.firstChild &&
       node.firstChild === node.lastChild &&
+      node.firstChild.type !== "text" &&
       hasLeadingLineBreak(node.firstChild) &&
       (!node.lastChild.isTrailingSpaceSensitive ||
         hasTrailingLineBreak(node.lastChild)))
@@ -311,7 +301,7 @@ function forceBreakContent(node) {
 function forceBreakChildren(node) {
   return (
     node.type === "element" &&
-    node.children.length !== 0 &&
+    node.children.length > 0 &&
     (["html", "head", "ul", "ol", "select"].includes(node.name) ||
       (node.cssDisplay.startsWith("table") && node.cssDisplay !== "table-cell"))
   );
@@ -398,6 +388,10 @@ function _inferScriptParser(node) {
     return "markdown";
   }
 
+  if (type === "text/html") {
+    return "html";
+  }
+
   if (type && (type.endsWith("json") || type.endsWith("importmap"))) {
     return "json";
   }
@@ -409,7 +403,7 @@ function _inferScriptParser(node) {
 
 function inferStyleParser(node) {
   const { lang } = node.attrMap;
-  if (lang === "postcss" || lang === "css") {
+  if (!lang || lang === "postcss" || lang === "css") {
     return "css";
   }
 
@@ -431,18 +425,16 @@ function inferScriptParser(node, options) {
   }
 
   if (node.name === "style") {
-    return inferStyleParser(node) || "css";
+    return inferStyleParser(node);
   }
 
-  if (options && isVueCustomBlock(node, options)) {
+  if (options && isVueNonHtmlBlock(node, options)) {
     return (
       _inferScriptParser(node) ||
-      inferStyleParser(node) ||
-      getParserName(node.attrMap.lang, options)
+      (!("src" in node.attrMap) &&
+        inferParserByLanguage(node.attrMap.lang, options))
     );
   }
-
-  return null;
 }
 
 function isBlockLikeCssDisplay(cssDisplay) {
@@ -477,7 +469,11 @@ function isPreLikeNode(node) {
   return getNodeCssStyleWhiteSpace(node).startsWith("pre");
 }
 
-function countParents(path, predicate = () => true) {
+/**
+ * @param {AstPath} path
+ * @param {(any) => boolean} predicate
+ */
+function countParents(path, predicate) {
   let counter = 0;
   for (let i = path.stack.length - 1; i >= 0; i--) {
     const value = path.stack[i];
@@ -530,7 +526,15 @@ function getNodeCssStyleDisplay(node, options) {
       return "inline";
     case "ignore":
       return "block";
-    default:
+    default: {
+      // See https://github.com/prettier/prettier/issues/8151
+      if (
+        options.parser === "vue" &&
+        node.parent &&
+        node.parent.type === "root"
+      ) {
+        return "block";
+      }
       return (
         (node.type === "element" &&
           (!node.namespace ||
@@ -539,6 +543,7 @@ function getNodeCssStyleDisplay(node, options) {
           CSS_DISPLAY_TAGS[node.name]) ||
         CSS_DISPLAY_DEFAULT
       );
+    }
   }
 }
 
@@ -560,7 +565,7 @@ function getNodeCssStyleWhiteSpace(node) {
 }
 
 function getMinIndentation(text) {
-  let minIndentation = Infinity;
+  let minIndentation = Number.POSITIVE_INFINITY;
 
   for (const lineText of text.split("\n")) {
     if (lineText.length === 0) {
@@ -582,7 +587,7 @@ function getMinIndentation(text) {
     }
   }
 
-  return minIndentation === Infinity ? 0 : minIndentation;
+  return minIndentation === Number.POSITIVE_INFINITY ? 0 : minIndentation;
 }
 
 function dedentString(text, minIndent = getMinIndentation(text)) {
@@ -592,41 +597,6 @@ function dedentString(text, minIndent = getMinIndentation(text)) {
         .split("\n")
         .map((lineText) => lineText.slice(minIndent))
         .join("\n");
-}
-
-function normalizeParts(parts) {
-  const newParts = [];
-
-  const restParts = parts.slice();
-  while (restParts.length !== 0) {
-    const part = restParts.shift();
-
-    if (!part) {
-      continue;
-    }
-
-    if (part.type === "concat") {
-      restParts.unshift(...part.parts);
-      continue;
-    }
-
-    if (
-      newParts.length !== 0 &&
-      typeof newParts[newParts.length - 1] === "string" &&
-      typeof part === "string"
-    ) {
-      newParts.push(newParts.pop() + part);
-      continue;
-    }
-
-    newParts.push(part);
-  }
-
-  return newParts;
-}
-
-function identity(x) {
-  return x;
 }
 
 function shouldNotPrintClosingTag(node, options) {
@@ -652,13 +622,52 @@ function unescapeQuoteEntities(text) {
 }
 
 // top-level elements (excluding <template>, <style> and <script>) in Vue SFC are considered custom block
-const rootElementsSet = new Set(["template", "style", "script", "html"]);
+// See https://vue-loader.vuejs.org/spec.html for detail
+const vueRootElementsSet = new Set(["template", "style", "script"]);
 function isVueCustomBlock(node, options) {
+  return isVueSfcBlock(node, options) && !vueRootElementsSet.has(node.fullName);
+}
+
+function isVueSfcBlock(node, options) {
   return (
     options.parser === "vue" &&
     node.type === "element" &&
     node.parent.type === "root" &&
-    !rootElementsSet.has(node.fullName)
+    node.fullName.toLowerCase() !== "html"
+  );
+}
+
+function isVueNonHtmlBlock(node, options) {
+  return (
+    isVueSfcBlock(node, options) &&
+    (isVueCustomBlock(node, options) ||
+      (node.attrMap.lang && node.attrMap.lang !== "html"))
+  );
+}
+
+function isVueSlotAttribute(attribute) {
+  const attributeName = attribute.fullName;
+  return (
+    attributeName.charAt(0) === "#" ||
+    attributeName === "slot-scope" ||
+    attributeName === "v-slot" ||
+    attributeName.startsWith("v-slot:")
+  );
+}
+
+function isVueSfcBindingsAttribute(attribute, options) {
+  const element = attribute.parent;
+  if (!isVueSfcBlock(element, options)) {
+    return false;
+  }
+  const tagName = element.fullName;
+  const attributeName = attribute.fullName;
+
+  return (
+    // https://github.com/vuejs/rfcs/blob/sfc-improvements/active-rfcs/0000-sfc-script-setup.md
+    (tagName === "script" && attributeName === "setup") ||
+    // https://github.com/vuejs/rfcs/blob/sfc-improvements/active-rfcs/0000-sfc-style-variables.md
+    (tagName === "style" && attributeName === "vars")
   );
 }
 
@@ -682,11 +691,12 @@ module.exports = {
   getNodeCssStyleWhiteSpace,
   getPrettierIgnoreAttributeCommentData,
   hasPrettierIgnore,
-  identity,
   inferScriptParser,
   isVueCustomBlock,
+  isVueNonHtmlBlock,
+  isVueSlotAttribute,
+  isVueSfcBindingsAttribute,
   isDanglingSpaceSensitiveNode,
-  isFrontMatterNode,
   isIndentationSensitiveNode,
   isLeadingSpaceSensitiveNode,
   isPreLikeNode,
@@ -695,7 +705,6 @@ module.exports = {
   isTrailingSpaceSensitiveNode,
   isWhitespaceSensitiveNode,
   isUnknownNamespace,
-  normalizeParts,
   preferHardlineAsLeadingSpaces,
   preferHardlineAsTrailingSpaces,
   shouldNotPrintClosingTag,

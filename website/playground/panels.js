@@ -1,5 +1,5 @@
 import CodeMirror from "codemirror";
-import React from "react";
+import * as React from "react";
 
 class CodeMirrorPanel extends React.Component {
   constructor() {
@@ -122,13 +122,13 @@ class CodeMirrorPanel extends React.Component {
 }
 
 function getIndexPosition(text, indexes) {
-  indexes = indexes.slice();
+  indexes = [...indexes];
   let line = 0;
   let count = 0;
   let lineStart = 0;
   const result = [];
 
-  while (indexes.length) {
+  while (indexes.length > 0) {
     const index = indexes.shift();
 
     while (count < index && count < text.length) {

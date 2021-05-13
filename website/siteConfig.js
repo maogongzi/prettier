@@ -2,11 +2,11 @@
 
 // Docs: https://docusaurus.io/docs/en/site-config.html
 
-const parseYaml = require("js-yaml").safeLoad;
 const path = require("path");
 const fs = require("fs");
+const { load: parseYaml } = require("js-yaml");
 
-const PACKAGE = require("../package");
+const PACKAGE = require("../package.json");
 const GITHUB_URL = `https://github.com/${PACKAGE.repository}`;
 
 function loadYaml(fsPath) {
@@ -32,11 +32,10 @@ const siteConfig = {
   tideliftUrl:
     "https://tidelift.com/subscription/pkg/npm-prettier?utm_source=npm-prettier&utm_medium=referral&utm_campaign=website",
   /* base url for editing docs, usage example: editUrl + 'en/doc1.md' */
-  editUrl: `${GITHUB_URL}/edit/master/docs/`,
+  editUrl: `${GITHUB_URL}/edit/main/docs/`,
   headerLinks: [
     { href: "/playground/", label: "Playground" },
-    { doc: "index", label: "About" },
-    { doc: "install", label: "Usage" },
+    { doc: "index", label: "Docs" },
     { blog: true, label: "Blog" },
     { search: true },
     { href: "https://opencollective.com/prettier", label: "Donate" },
@@ -55,7 +54,7 @@ const siteConfig = {
     theme: "default",
     version: require("highlight.js/package.json").version,
   },
-  usePrism: ["javascript", "jsx", "typescript", "ts", "js", "html"],
+  usePrism: ["javascript", "jsx", "typescript", "ts", "js", "html", "css"],
   useEnglishUrl: true,
   scripts: ["https://buttons.github.io/buttons.js"],
   stylesheets: [
